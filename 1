@@ -1,0 +1,30 @@
+
+import pandas as pd
+from sklearn.decomposition import TruncatedSVD
+
+# Шаг 1: Создание фиктивных данных
+data = {
+    'user_id': [1, 2, 1, 3, 4, 2, 4, 5, 3, 2, 1],
+    'recipe_id': [10, 20, 20, 30, 10, 30, 20, 10, 30, 20, 30],
+    'rating': [5, 3, 4, 2, 5, 3, 4, 5, 4, 4, 2]
+}
+df = pd.DataFrame(data)
+
+# Шаг 2: Построение матрицы "пользователь-рецепт"
+user_recipe_matrix = df.pivot_table(index='user_id', columns='recipe_id', values='rating').fillna(0)
+
+# Шаг 3: Применение SVD для рекомендации рецептов
+svd = TruncatedSVD(n_components=2, random_state=42)
+matrix_reduced = svd.fit_transform(user_recipe_matrix)
+
+# Функция для получения рекомендаций
+def get_recommendations(user_id, matrix, svd_model, top_n=3):
+    user_index = matrix.index.get_loc(user_id)
+    predicted_ratings = svd_model.inverse_transform(svd_model.transform(matrix.iloc[user_index].values.reshape(1, -1)))
+    top_recipes_indices = predicted_ratings.argsort()[0][-top_n:]
+    recommended_recipes = matrix.columns[top_recipes_indices].tolist()
+    return recommended_recipes
+
+
+user_id = 1
+recommended_recipes = get_recommendations(user_id, user_recipe_matrix, svd, top_n=3)
